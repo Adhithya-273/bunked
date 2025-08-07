@@ -1,6 +1,6 @@
 // server.js
 // A brand new backend written in JavaScript using Node.js, Express, and Puppeteer.
-// [FIXED] Using the most robust navigation and selector waiting strategy.
+// [FIXED] Using a direct navigation strategy for maximum reliability.
 
 const express = require('express');
 const puppeteer = require('puppeteer');
@@ -13,6 +13,7 @@ app.use(express.json());
 
 // --- Configuration ---
 const LOGIN_URL = "https://asiet.etlab.app/user/login";
+const ATTENDANCE_SUBJECT_URL = "https://asiet.etlab.app/attendance/report/attdncebySubReport";
 
 // --- Attendance Calculation Functions (in JavaScript) ---
 const calculateCurrentPercentage = (attended, total) => {
@@ -47,7 +48,7 @@ const classesToBunk = (attended, total, targetPercentage) => {
 
 // --- Web Scraping Function (Using Puppeteer) ---
 const getAttendanceData = async (username, password) => {
-    console.log("Starting Puppeteer scraper with Python logic...");
+    console.log("Starting Puppeteer scraper with direct navigation strategy...");
     let browser = null;
     let page = null;
     let scrapedData = {};
@@ -65,10 +66,9 @@ const getAttendanceData = async (username, password) => {
         page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
 
+        // Step 1: Log in
         console.log(`Navigating to login page: ${LOGIN_URL}`);
         await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
-
-        // Step 1: Log in
         const loginButtonSelector = '[name="yt0"]';
         await page.waitForSelector(loginButtonSelector, { timeout: 30000 });
         await page.type('#LoginForm_username', username);
@@ -76,37 +76,22 @@ const getAttendanceData = async (username, password) => {
         await page.click(loginButtonSelector);
         console.log("Clicked login button.");
 
-        // Step 2: Wait for dashboard to confirm login
+        // Step 2: Wait for a known element on the dashboard to confirm login was successful
         await page.waitForSelector('#breadcrumb', { timeout: 15000 });
         console.log("Successfully logged in.");
 
         // --- THIS IS THE FOOLPROOF FIX ---
-        // Step 3: Find the "Attendance" link, click it, and wait for navigation.
-        console.log("Waiting for 'Attendance' link...");
-        const attendanceLinkSelector = 'aria/Attendance';
-        await page.waitForSelector(attendanceLinkSelector, { timeout: 10000 });
-        await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
-            page.click(attendanceLinkSelector)
-        ]);
-        console.log("Clicked 'Attendance' link and navigated.");
+        // Step 3: Navigate DIRECTLY to the final report page, bypassing intermediate clicks.
+        console.log(`Navigating directly to report page: ${ATTENDANCE_SUBJECT_URL}`);
+        await page.goto(ATTENDANCE_SUBJECT_URL, { waitUntil: 'networkidle2' });
+        console.log("Arrived at report page.");
 
-        // Step 4: Now that navigation is complete, wait for the next link to be visible as a final check.
-        console.log("Waiting for 'Attendance By Subject' link to appear...");
-        const subjectLinkSelector = 'aria/Attendance By Subject';
-        await page.waitForSelector(subjectLinkSelector, { timeout: 15000 });
-        await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
-            page.click(subjectLinkSelector)
-        ]);
-        console.log("Clicked 'Attendance By Subject' link and navigated.");
-
-        // Step 5: Wait for the final table
+        // Step 4: Wait for the final table to appear on the report page.
         console.log("Waiting for final attendance table...");
         await page.waitForSelector('table.items', { timeout: 15000 });
         console.log("Found attendance summary table. Parsing data...");
 
-        // Step 6: Parse the table
+        // Step 5: Parse the table
         const subjectAttendance = await page.evaluate(() => {
             const data = {};
             const headerRow = document.querySelector('table.items thead tr');
