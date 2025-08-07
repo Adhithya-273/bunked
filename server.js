@@ -1,6 +1,6 @@
 // server.js
 // A brand new backend written in JavaScript using Node.js, Express, and Puppeteer.
-// [FIXED] Using robust navigation waits for maximum server stability.
+// [FIXED] Using the most robust navigation and selector waiting strategy.
 
 const express = require('express');
 const puppeteer = require('puppeteer');
@@ -81,28 +81,29 @@ const getAttendanceData = async (username, password) => {
         console.log("Successfully logged in.");
 
         // --- THIS IS THE FOOLPROOF FIX ---
-        // Step 3: Find the "Attendance" link, click it, and wait for the subsequent page to load.
+        // Step 3: Find the "Attendance" link, click it, and wait for navigation.
         console.log("Waiting for 'Attendance' link...");
         const attendanceLinkSelector = 'aria/Attendance';
         await page.waitForSelector(attendanceLinkSelector, { timeout: 10000 });
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2' }), // Wait for the new page to load
-            page.click(attendanceLinkSelector) // Click the link that causes navigation
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+            page.click(attendanceLinkSelector)
         ]);
         console.log("Clicked 'Attendance' link and navigated.");
 
-        // Step 4: Now on the new page, find and click the "Attendance By Subject" link.
-        console.log("Waiting for 'Attendance By Subject' link...");
+        // Step 4: Now that navigation is complete, wait for the next link to be visible as a final check.
+        console.log("Waiting for 'Attendance By Subject' link to appear...");
         const subjectLinkSelector = 'aria/Attendance By Subject';
         await page.waitForSelector(subjectLinkSelector, { timeout: 15000 });
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
             page.click(subjectLinkSelector)
         ]);
         console.log("Clicked 'Attendance By Subject' link and navigated.");
 
         // Step 5: Wait for the final table
-        await page.waitForSelector('table.items', { timeout: 10000 });
+        console.log("Waiting for final attendance table...");
+        await page.waitForSelector('table.items', { timeout: 15000 });
         console.log("Found attendance summary table. Parsing data...");
 
         // Step 6: Parse the table
