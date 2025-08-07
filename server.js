@@ -1,6 +1,6 @@
 // server.js
 // A brand new backend written in JavaScript using Node.js, Express, and Puppeteer.
-// [FIXED] The definitive solution: Direct navigation with a longer, more patient wait.
+// [FIXED] The definitive solution: A robust, step-by-step navigation with patient waits.
 
 const express = require('express');
 const puppeteer = require('puppeteer');
@@ -13,7 +13,6 @@ app.use(express.json());
 
 // --- Configuration ---
 const LOGIN_URL = "https://asiet.etlab.app/user/login";
-const ATTENDANCE_SUBJECT_URL = "https://asiet.etlab.app/attendance/report/attdncebySubReport";
 
 // --- Attendance Calculation Functions (in JavaScript) ---
 const calculateCurrentPercentage = (attended, total) => {
@@ -48,7 +47,7 @@ const classesToBunk = (attended, total, targetPercentage) => {
 
 // --- Web Scraping Function (Using Puppeteer) ---
 const getAttendanceData = async (username, password) => {
-    console.log("Starting Puppeteer scraper with direct navigation strategy...");
+    console.log("Starting robust Puppeteer scraper...");
     let browser = null;
     let page = null;
     let scrapedData = {};
@@ -65,30 +64,50 @@ const getAttendanceData = async (username, password) => {
         });
         page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
+        // Set a generous default timeout for all actions
+        page.setDefaultNavigationTimeout(60000); // 60 seconds
+        page.setDefaultTimeout(60000); // 60 seconds
+
 
         // Step 1: Log in
         console.log(`Navigating to login page: ${LOGIN_URL}`);
         await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
         const loginButtonSelector = '[name="yt0"]';
-        await page.waitForSelector(loginButtonSelector, { timeout: 30000 });
+        await page.waitForSelector(loginButtonSelector);
         await page.type('#LoginForm_username', username);
         await page.type('#LoginForm_password', password);
-        await page.click(loginButtonSelector);
-        console.log("Clicked login button.");
+        
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.click(loginButtonSelector)
+        ]);
+        console.log("Clicked login button and waited for dashboard.");
 
-        // Step 2: Wait for a known element on the dashboard to confirm login was successful
-        await page.waitForSelector('#breadcrumb', { timeout: 15000 });
-        console.log("Successfully logged in.");
+        // Step 2: On dashboard, find and click the "Attendance" link
+        console.log("Waiting for 'Attendance' link...");
+        const attendanceLinkSelector = 'aria/Attendance';
+        await page.waitForSelector(attendanceLinkSelector);
+        
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.click(attendanceLinkSelector)
+        ]);
+        console.log("Clicked 'Attendance' link and navigated.");
 
-        // Step 3: Navigate DIRECTLY to the final report page
-        console.log(`Navigating directly to report page: ${ATTENDANCE_SUBJECT_URL}`);
-        await page.goto(ATTENDANCE_SUBJECT_URL, { waitUntil: 'networkidle2' });
-        console.log("Arrived at report page.");
+        // Step 3: On the attendance page, find and click "Attendance By Subject"
+        console.log("Waiting for 'Attendance By Subject' link...");
+        const subjectLinkSelector = 'aria/Attendance By Subject';
+        await page.waitForSelector(subjectLinkSelector);
 
-        // --- THIS IS THE FOOLPROOF FIX ---
-        // Step 4: Wait patiently for the table to appear on the report page.
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.click(subjectLinkSelector)
+        ]);
+        console.log("Clicked 'Attendance By Subject' link and navigated.");
+
+        // Step 4: On the final page, wait for the table to appear.
         console.log("Waiting for final attendance table...");
-        await page.waitForSelector('table.items', { timeout: 30000 }); // Increased timeout to 30s
+        await page.waitForSelector('table.items');
         console.log("Found attendance summary table. Parsing data...");
 
         // Step 5: Parse the table
