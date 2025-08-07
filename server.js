@@ -1,6 +1,6 @@
 // server.js
 // A brand new backend written in JavaScript using Node.js, Express, and Puppeteer.
-// [FIXED] Using more reliable waits for selectors instead of full navigation.
+// [FIXED] Using robust navigation waits to prevent race conditions on the server.
 
 const express = require('express');
 const puppeteer = require('puppeteer');
@@ -80,20 +80,26 @@ const getAttendanceData = async (username, password) => {
         await page.waitForSelector('#breadcrumb', { timeout: 15000 });
         console.log("Successfully logged in.");
 
-        // Step 3: Find and click the "Attendance" link
+        // --- THIS IS THE FIX ---
+        // Step 3: Find the "Attendance" link, click it, and wait for the subsequent page to load.
         console.log("Waiting for 'Attendance' link...");
         const attendanceLinkSelector = 'aria/Attendance';
         await page.waitForSelector(attendanceLinkSelector, { timeout: 10000 });
-        await page.click(attendanceLinkSelector);
-        console.log("Clicked 'Attendance' link.");
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }), // Wait for the new page to load
+            page.click(attendanceLinkSelector) // Click the link that causes navigation
+        ]);
+        console.log("Clicked 'Attendance' link and navigated.");
 
-        // --- THIS IS THE FIX ---
-        // Step 4: Instead of waiting for navigation, wait for the next link to appear.
+        // Step 4: Now on the new page, find and click the "Attendance By Subject" link.
         console.log("Waiting for 'Attendance By Subject' link...");
         const subjectLinkSelector = 'aria/Attendance By Subject';
-        await page.waitForSelector(subjectLinkSelector, { timeout: 15000 }); // Increased timeout
-        await page.click(subjectLinkSelector);
-        console.log("Clicked 'Attendance By Subject' link.");
+        await page.waitForSelector(subjectLinkSelector, { timeout: 15000 });
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.click(subjectLinkSelector)
+        ]);
+        console.log("Clicked 'Attendance By Subject' link and navigated.");
 
         // Step 5: Wait for the final table
         await page.waitForSelector('table.items', { timeout: 10000 });
