@@ -1,6 +1,6 @@
 // server.js
 // A brand new backend written in JavaScript using Node.js, Express, and Puppeteer.
-// [FIXED] Using a direct navigation strategy for maximum reliability.
+// [FIXED] The definitive solution: Direct navigation with a longer, more patient wait.
 
 const express = require('express');
 const puppeteer = require('puppeteer');
@@ -80,15 +80,15 @@ const getAttendanceData = async (username, password) => {
         await page.waitForSelector('#breadcrumb', { timeout: 15000 });
         console.log("Successfully logged in.");
 
-        // --- THIS IS THE FOOLPROOF FIX ---
-        // Step 3: Navigate DIRECTLY to the final report page, bypassing intermediate clicks.
+        // Step 3: Navigate DIRECTLY to the final report page
         console.log(`Navigating directly to report page: ${ATTENDANCE_SUBJECT_URL}`);
         await page.goto(ATTENDANCE_SUBJECT_URL, { waitUntil: 'networkidle2' });
         console.log("Arrived at report page.");
 
-        // Step 4: Wait for the final table to appear on the report page.
+        // --- THIS IS THE FOOLPROOF FIX ---
+        // Step 4: Wait patiently for the table to appear on the report page.
         console.log("Waiting for final attendance table...");
-        await page.waitForSelector('table.items', { timeout: 15000 });
+        await page.waitForSelector('table.items', { timeout: 30000 }); // Increased timeout to 30s
         console.log("Found attendance summary table. Parsing data...");
 
         // Step 5: Parse the table
