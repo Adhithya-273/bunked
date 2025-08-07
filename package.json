@@ -1,0 +1,16 @@
+{
+  "name": "bunked",
+  "version": "1.0.0",
+  "description": "A Node.js backend to scrape attendance data.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "puppeteer": "^22.10.0"
+  }
+}
